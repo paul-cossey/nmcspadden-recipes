@@ -1,0 +1,80 @@
+Description: |
+  Downloads the current release version of Eclipse Temurin and imports into Munki. This is the signed pkg version rather than the tar version, for those that require a signed package rather than accurate version number.
+
+  FEATURE_VERSION may be any valid whole number, e.g. 8, 11, 16, 17. See https://api.adoptium.net/v3/info/available_releases for available feature versions.
+
+  RELEASE_TYPE can be 'ga' (general availablility) or 'ea' (early access).
+
+  OS may be 'mac' or others.
+
+  DOWNLOAD_ARCH may be 'x64' or 'aarch64' for macOS-specific builds. Note that if you change this, you MUST also change MUNKI_ARCH to match what Munki expects: https://github.com/munki/munki/wiki/Pkginfo-Files#supported_architectures
+
+  IMAGE_TYPE may be 'jdk', 'jre', 'testimage', 'debugimage' or 'staticlibs'.
+
+  JVM_IMPLEMENTATION may be "hotspot", "openj9" or "dragonwell".
+
+  HEAP_SIZE may be 'normal' or 'large'.
+
+  VENDOR may be 'adoptopenjdk', 'openjdk', 'adoptium', 'alibaba', 'ibm'.
+
+  Note that not all options are available for all vendors, and not all listed vendors may be currently available.
+Identifier: com.github.nmcspadden.munki.EclipseTemurin
+Input:
+  MUNKI_REPO_SUBDIR: apps/%NAME%
+  FEATURE_VERSION: "11"
+  NAME: EclipseTemurin%FEATURE_VERSION%
+  OS: mac
+  RELEASE_TYPE: ga
+  DOWNLOAD_ARCH: x64
+  MUNKI_ARCH: x86_64
+  IMAGE_TYPE: jdk
+  JVM_IMPLEMENTATION: hotspot
+  HEAP_SIZE: normal
+  VENDOR: adoptium
+  pkginfo:
+    catalogs:
+      - testing
+    description: Eclipse Temurin JDK %FEATURE_VERSION%
+    developer: Adoptium
+    display_name: Eclipse Temurin JDK %FEATURE_VERSION%
+    name: '%NAME%'
+    supported_architectures: 
+      - '%MUNKI_ARCH%'
+    unattended_install: true
+MinimumVersion: '2.3'
+ParentRecipe: com.github.nmcspadden.recipes.download.EclipseTemurin
+Process:
+  - Processor: FlatPkgUnpacker
+    Arguments:
+      flat_pkg_path: "%pathname%"
+      destination_path: "%RECIPE_CACHE_DIR%/unpack"
+      purge_destination: True
+
+  - Processor: PkgPayloadUnpacker
+    Arguments:
+      pkg_payload_path: "%RECIPE_CACHE_DIR%/unpack/net.temurin.%FEATURE_VERSION%.jdk.pkg/Payload"
+      destination_path: "%RECIPE_CACHE_DIR%/payload"
+      purge_destination: False
+
+  - Processor: PlistReader
+    Arguments:
+      info_path: "%RECIPE_CACHE_DIR%/payload/Library/Java/JavaVirtualMachines/temurin-%FEATURE_VERSION%.jdk/Contents/Info.plist"
+      plist_keys:
+        CFBundleShortVersionString: major_version
+        CFBundleVersion: minor_version
+
+  - Processor: PathDeleter
+    Arguments:
+      path_list:
+        - "%RECIPE_CACHE_DIR%/unpack"
+        - "%RECIPE_CACHE_DIR%/payload"
+
+  - Processor: MunkiPkginfoMerger
+    Arguments:
+      additional_pkginfo:
+        version: '%major_version%+%minor_version%'
+        
+  - Processor: MunkiImporter
+    Arguments:
+      pkg_path: '%pathname%'
+      repo_subdirectory: '%MUNKI_REPO_SUBDIR%'

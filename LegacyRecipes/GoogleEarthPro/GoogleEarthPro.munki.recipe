@@ -33,7 +33,7 @@
     <key>MinimumVersion</key>
     <string>2.7</string>
     <key>ParentRecipe</key>
-    <string>com.github.nmcspadden-recipes.download.google-earth-pro</string>
+    <string>com.github.nstrauss.download.GoogleEarthPro</string>
     <key>Process</key>
     <array>
         <!-- Make a fake pkg root -->
